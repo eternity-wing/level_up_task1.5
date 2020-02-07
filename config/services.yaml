@@ -4,7 +4,12 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
 parameters:
-
+    total_users_number: '%env(resolve:TOTAL_USERS_NUMBER)%'
+    total_offers_number: '%env(resolve:TOTAL_OFFERS_NUMBER)%'
+    total_products_number: '%env(resolve:TOTAL_PRODUCTS_NUMBER)%'
+    total_sources_number: '%env(resolve:TOTAL_SOURCES_NUMBER)%'
+    total_customers_number: '%env(resolve:TOTAL_CUSTOMERS_NUMBER)%'
+    premium_sources_possibility: '%env(resolve:PREMIUM_SOURCES_POSSIBILITY)%)'
 services:
     # default configuration for services in *this* file
     _defaults:

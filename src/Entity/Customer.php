@@ -32,6 +32,10 @@ class Customer
     {
         $this->products = new ArrayCollection();
     }
+    public function __toString()
+    {
+        return $this->brand;
+    }
 
     public function getId(): ?int
     {
