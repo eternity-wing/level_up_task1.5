@@ -75,7 +75,7 @@ class AppFixtures extends Fixture
         for ($i = 1; $i <= $this->container->getParameter('total_sources_number'); $i++) {
             $source = new Source();
             $source->setName("source-{$i}");
-            $isPremiumByChance = rand() < $premiumSourcePossibility;
+            $isPremiumByChance = rand(1, 100) < $premiumSourcePossibility;
             $source->setIsPremium($isPremiumByChance);
             $manager->persist($source);
         }

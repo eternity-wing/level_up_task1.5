@@ -47,4 +47,12 @@ class SourceRepository extends ServiceEntityRepository
         ;
     }
     */
+
+
+    public function getPremiumSourceIds(){
+        $qb = $this->createQueryBuilder('s');
+        $qb->select('s.id');
+        $qb->where('s.isPremium = 1');
+        return $qb->getQuery()->getResult();
+    }
 }

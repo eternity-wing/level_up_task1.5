@@ -38,6 +38,11 @@ class Product
      */
     private $offers;
 
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $lastOrderNumber;
+
     public function __construct()
     {
         $this->sources = new ArrayCollection();
@@ -126,6 +131,18 @@ class Product
                 $offer->setProduct(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getLastOrderNumber(): ?int
+    {
+        return $this->lastOrderNumber;
+    }
+
+    public function setLastOrderNumber(?int $lastOrderNumber): self
+    {
+        $this->lastOrderNumber = $lastOrderNumber;
 
         return $this;
     }

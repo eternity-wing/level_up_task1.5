@@ -47,4 +47,21 @@ class OfferRepository extends ServiceEntityRepository
         ;
     }
     */
+
+
+    /**
+     * @return \Doctrine\ORM\Query
+     */
+    public function getNoneOrderedOffersQuery():\Doctrine\ORM\Query{
+        $qb = $this->createQueryBuilder('o');
+        $qb->innerJoin('o.product', 'p');
+        $qb->innerJoin('o.source', 's');
+        $qb->where('o.orderNumber IS NULL');
+        $qb->addSelect('p.id AS productId');
+        $qb->addSelect('s.id AS sourceId');
+        $qb->orderBy('o.id', 'ASC');
+        $qb->orderBy('p.id', 'ASC');
+        $qb->orderBy('s.id', 'ASC');
+        return $qb->getQuery();
+    }
 }

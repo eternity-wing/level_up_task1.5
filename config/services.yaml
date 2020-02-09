@@ -9,7 +9,7 @@ parameters:
     total_products_number: '%env(resolve:TOTAL_PRODUCTS_NUMBER)%'
     total_sources_number: '%env(resolve:TOTAL_SOURCES_NUMBER)%'
     total_customers_number: '%env(resolve:TOTAL_CUSTOMERS_NUMBER)%'
-    premium_sources_possibility: '%env(resolve:PREMIUM_SOURCES_POSSIBILITY)%)'
+    premium_sources_possibility: '%env(resolve:PREMIUM_SOURCES_POSSIBILITY)%'
 services:
     # default configuration for services in *this* file
     _defaults:
