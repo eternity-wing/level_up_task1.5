@@ -12,16 +12,49 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * Class DataMigrationCommand
+ * @package App\Command
+ * @author Wings <eternity.mr8@gmail.com>
+ */
 class DataMigrationCommand extends Command
 {
+    /**
+     * @var int
+     */
     const DEFAULT_BATCH_SIZE = 1000;
 
     protected static $defaultName = 'app:data-migration';
 
+    /**
+     * @var EntityManagerInterface
+     */
     private $objectManager;
+    /**
+     * @var ContainerInterface
+     */
     private $container;
+    /**
+     * @var array
+     */
     private $premiumSourceIdS = [];
 
+
+    /**
+     * @var OutputInterface
+     */
+    private $outputInterface;
+
+    /**
+     * @var Product|null
+     */
+    private $activeProduct = null;
+
+    /**
+     * DataMigrationCommand constructor.
+     * @param EntityManagerInterface $objectManager
+     * @param ContainerInterface $container
+     */
     public function __construct(EntityManagerInterface $objectManager, ContainerInterface $container)
     {
         $this->objectManager = $objectManager;
@@ -39,42 +72,63 @@ class DataMigrationCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->setOutputInterface($output);
         $q = $this->objectManager->getRepository(Offer::class)->getNoneOrderedOffersQuery();
         $iterableResult = $q->iterate();
-        $i = 1;
-        $currentProduct = null;
-        foreach ($iterableResult as $iterateKey => $row) {
-            $row = $this->fixAndPrepareRow($row);
+        $iterationIndex = 1;
+        $isReachedToBunchSize = null;
+        foreach ($iterableResult as $row) {
 
-            $offer = $row[0][0];
-            $sourceId = $row[1]['sourceId'];
-            $productId = $row[1]['productId'];
+            $this->updateFetchedRow($this->fixAndPrepareRow($row));
 
-            $output->writeln("offer id:{$offer->getId()} sourceId: {$sourceId}, productId: {$productId}");
-
-
-            $isPremiumSource = $this->isPremiumSource($row[1]['sourceId']);
-
-            if(!$currentProduct || $currentProduct->getId() != $productId){
-                $currentProduct = $this->getProduct($productId);
+            $isReachedToBunchSize = ($iterationIndex % self::DEFAULT_BATCH_SIZE) === 0;
+            if ($isReachedToBunchSize) {
+                $this->flushAndClearObjectManager();
+                $this->activeProduct = null;
             }
-            $productLastOrderNumber = $currentProduct->getLastOrderNumber() ?? 0;
-            $orderNumber = $isPremiumSource ? 0 : $productLastOrderNumber + 1;
-            $currentProduct->setLastOrderNumber($orderNumber > 0 ? $orderNumber : $productLastOrderNumber);
-            $offer->setOrderNumber($orderNumber);
-            $output->writeln("Premium source: {$isPremiumSource} Offer Order Number:{$orderNumber} Product Last Order Number: {$productLastOrderNumber}");
-
-            if (($i % self::DEFAULT_BATCH_SIZE) === 0) {
-                $output->writeln("start updating database");
-                $this->objectManager->flush(); // Executes all updates.
-                $this->objectManager->clear();
-                $output->writeln("finish updating database");
-                $currentProduct = null;
-
-            }
-            ++$i;
+            ++$iterationIndex;
         }
+        $isBunchNotUpdated = $isReachedToBunchSize === false;
+        if ($isBunchNotUpdated) {
+            $this->flushAndClearObjectManager();
+        }
+
         return 0;
+    }
+
+    /**
+     * @param $row
+     */
+    private function updateFetchedRow($row): void
+    {
+        $offer = $row[0][0];
+        $sourceId = $row[1]['sourceId'];
+        $productId = $row[1]['productId'];
+
+        $this->outputInterface->writeln("offer id:{$offer->getId()} sourceId: {$sourceId}, productId: {$productId}");
+
+
+        $isPremiumSource = $this->isPremiumSource($row[1]['sourceId']);
+
+        if (!$this->activeProduct || $this->activeProduct->getId() != $productId) {
+            $this->activeProduct = $this->getProduct($productId);
+        }
+        $productLastOrderNumber = $this->activeProduct->getLastOrderNumber() ?? 0;
+        $orderNumber = $isPremiumSource ? 0 : $productLastOrderNumber + 1;
+        $this->activeProduct->setLastOrderNumber($orderNumber > 0 ? $orderNumber : $productLastOrderNumber);
+        $offer->setOrderNumber($orderNumber);
+        $this->outputInterface->writeln("Premium source: {$isPremiumSource} Offer Order Number:{$orderNumber} Product Last Order Number: {$productLastOrderNumber}");
+    }
+
+    /**
+     *
+     */
+    private function flushAndClearObjectManager(): void
+    {
+        $this->outputInterface->writeln("start updating database");
+        $this->objectManager->flush();
+        $this->objectManager->clear();
+        $this->outputInterface->writeln("finish updating database");
     }
 
     /**
@@ -84,16 +138,21 @@ class DataMigrationCommand extends Command
      * @param array $row
      * @return array
      */
-    private function fixAndPrepareRow(array $row):array {
+    private function fixAndPrepareRow(array $row): array
+    {
         $row = array_values($row);
-        if(!isset($row[1])){
+        if (!isset($row[1])) {
             $row[1]['productId'] = $row[0]['productId'];
             $row[1]['sourceId'] = $row[0]['sourceId'];
         }
         return $row;
     }
 
-    private function getPremiumSourceIds()
+
+    /**
+     * @return array
+     */
+    private function getPremiumSourceIds(): array
     {
         $premiumIds = $this->objectManager->getRepository(Source::class)->getPremiumSourceIds();
         return array_map(function ($source) {
@@ -101,7 +160,12 @@ class DataMigrationCommand extends Command
         }, $premiumIds);
     }
 
-    private function isPremiumSource($sourceId){
+    /**
+     * @param $sourceId
+     * @return bool
+     */
+    private function isPremiumSource($sourceId): bool
+    {
         return in_array($sourceId, $this->premiumSourceIdS);
     }
 
@@ -109,8 +173,16 @@ class DataMigrationCommand extends Command
      * @param $productId
      * @return Product
      */
-    private function getProduct($productId):product{
+    private function getProduct($productId): Product
+    {
         return $this->objectManager->getRepository(Product::class)->find($productId);
     }
 
+    /**
+     * @param OutputInterface $output
+     */
+    private function setOutputInterface(OutputInterface $output): void
+    {
+        $this->outputInterface = $output;
+    }
 }
