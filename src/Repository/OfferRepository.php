@@ -61,7 +61,6 @@ class OfferRepository extends ServiceEntityRepository
         $qb->addSelect('s.id AS sourceId');
         $qb->orderBy('o.id', 'ASC');
         $qb->orderBy('p.id', 'ASC');
-        $qb->orderBy('s.id', 'ASC');
         return $qb->getQuery();
     }
 }

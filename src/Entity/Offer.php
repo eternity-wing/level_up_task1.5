@@ -6,6 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass="App\Repository\OfferRepository")
+ * @ORM\Table(indexes={@ORM\Index(name="product_offer_idx", columns={"product_id", "id"})})
  */
 class Offer
 {
