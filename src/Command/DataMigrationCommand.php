@@ -11,6 +11,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Internal\Hydration\IterableResult;
 
 /**
  * Class DataMigrationCommand
@@ -73,8 +74,28 @@ class DataMigrationCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->setOutputInterface($output);
-        $q = $this->objectManager->getRepository(Offer::class)->getNoneOrderedOffersQuery();
-        $iterableResult = $q->iterate();
+
+        do{
+            $this->traverseAndUpdateIterableResult($this->getNoneOrderedOffersQueryIterator());
+        }while($this->isNoneOrderedOfferExists());
+
+        return 0;
+    }
+
+
+    /**
+     * @return IterableResult
+     */
+    private function getNoneOrderedOffersQueryIterator(): IterableResult{
+        $query = $this->objectManager->getRepository(Offer::class)->getNoneOrderedOffersQuery();
+        return $query->iterate();
+    }
+
+    /**
+     * @param IterableResult $iterableResult
+     * @return void
+     */
+    private function traverseAndUpdateIterableResult(IterableResult $iterableResult):void{
         $iterationIndex = 1;
         $isReachedToBunchSize = null;
         foreach ($iterableResult as $row) {
@@ -92,8 +113,13 @@ class DataMigrationCommand extends Command
         if ($isBunchNotUpdated) {
             $this->flushAndClearObjectManager();
         }
+    }
 
-        return 0;
+    /**
+     * @return bool
+     */
+    private function isNoneOrderedOfferExists():bool{
+       return $this->objectManager->getRepository(Offer::class)->findOneNoneOrderedOffer() != null;
     }
 
     /**

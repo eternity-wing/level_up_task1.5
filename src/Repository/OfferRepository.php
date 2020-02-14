@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Offer;
+use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Common\Persistence\ManagerRegistry;
 
@@ -52,7 +53,8 @@ class OfferRepository extends ServiceEntityRepository
     /**
      * @return \Doctrine\ORM\Query
      */
-    public function getNoneOrderedOffersQuery():\Doctrine\ORM\Query{
+    public function getNoneOrderedOffersQuery(): \Doctrine\ORM\Query
+    {
         $qb = $this->createQueryBuilder('o');
         $qb->innerJoin('o.product', 'p');
         $qb->innerJoin('o.source', 's');
@@ -63,4 +65,49 @@ class OfferRepository extends ServiceEntityRepository
         $qb->orderBy('p.id', 'ASC');
         return $qb->getQuery();
     }
+
+    /**
+     * @return Offer | null
+     */
+    public function findOneNoneOrderedOffer(): ?Offer
+    {
+        $qb = $this->createQueryBuilder('o');
+        $qb->where('o.orderNumber IS NULL');
+        $result = $qb->setMaxResults(1)->getQuery()->getResult();
+        return $result[0] ?? null;
+    }
+
+
+    /**
+     * @param Product $product
+     * @return int
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function findProductOffersCount(Product $product):int
+    {
+        $qb = $this->createQueryBuilder('o');
+        $qb->where('o.product = :p');
+        $qb->select('COUNT(o.id) AS offersCount');
+        $qb->setParameter('p', $product);
+        return (int)$qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @param Product $product
+     * @return int
+     * @throws \Doctrine\ORM\NoResultException
+     * @throws \Doctrine\ORM\NonUniqueResultException
+     */
+    public function findProductFreeSourceOffersCount(Product $product):int
+    {
+        $qb = $this->createQueryBuilder('o');
+        $qb->where('o.product = :p');
+        $qb->innerJoin('o.source', 's');
+        $qb->andWhere('s.isPremium IS NULL OR s.isPremium = 0');
+        $qb->select('COUNT(o.id) AS offersCount');
+        $qb->setParameter('p', $product);
+        return (int)$qb->getQuery()->getSingleScalarResult();
+    }
+
 }
